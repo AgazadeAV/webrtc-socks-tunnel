@@ -27,7 +27,7 @@ public class ControllerApp {
         transport.start();
 
         try (S3Client s3 = buildS3()) {
-            var sp = new S3SignalingProvider(s3, S3_BUCKET, "");
+            var sp = new S3SignalingProvider(s3, S3_BUCKET);
             String offerKey = "sessions/" + cfg.getSessionId() + "/offer.sdp";
             String answerKey = "sessions/" + cfg.getSessionId() + "/answer.sdp";
 

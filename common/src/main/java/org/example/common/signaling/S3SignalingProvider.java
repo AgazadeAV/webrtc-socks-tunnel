@@ -12,17 +12,14 @@ import java.time.Duration;
 public class S3SignalingProvider implements SignalingProvider {
     private final S3Client s3;
     private final String bucket;
-    private final String prefix;
 
-    public S3SignalingProvider(S3Client s3, String bucket, String prefix) {
+    public S3SignalingProvider(S3Client s3, String bucket) {
         this.s3 = s3;
         this.bucket = bucket;
-        this.prefix = (prefix == null || prefix.isBlank()) ? "" :
-                (prefix.endsWith("/") ? prefix : prefix + "/");
     }
 
     private String key(String key) {
-        return prefix + key;
+        return key;
     }
 
     @Override
