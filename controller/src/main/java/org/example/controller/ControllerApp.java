@@ -1,6 +1,7 @@
 package org.example.controller;
 
 import org.example.common.signaling.S3SignalingProvider;
+import org.example.common.signaling.SignalingProvider;
 import org.example.webrtc.WebRtcTransport;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -27,7 +28,7 @@ public class ControllerApp {
         transport.start();
 
         try (S3Client s3 = buildS3()) {
-            var sp = new S3SignalingProvider(s3, S3_BUCKET);
+            SignalingProvider sp = new S3SignalingProvider(s3, S3_BUCKET);
             String offerKey = "sessions/" + cfg.getSessionId() + "/offer.sdp";
             String answerKey = "sessions/" + cfg.getSessionId() + "/answer.sdp";
 
@@ -74,7 +75,7 @@ public class ControllerApp {
                 .build();
     }
 
-    private static void safeDelete(S3SignalingProvider sp, String key) {
+    private static void safeDelete(SignalingProvider sp, String key) {
         try {
             sp.delete(key);
         } catch (Exception ignored) {
