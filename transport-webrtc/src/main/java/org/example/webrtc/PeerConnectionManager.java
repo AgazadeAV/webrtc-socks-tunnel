@@ -45,9 +45,9 @@ public final class PeerConnectionManager {
         return pc;
     }
 
-    RTCDataChannel createDataChannel(String label) {
+    RTCDataChannel createDataChannel() {
         RTCDataChannelInit init = new RTCDataChannelInit();
-        return pc().createDataChannel(label, init);
+        return pc().createDataChannel("tunnel", init);
     }
 
     private PeerConnectionObserver wrapObserver(PeerConnectionObserver upstream) {

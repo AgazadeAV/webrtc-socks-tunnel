@@ -12,15 +12,13 @@ import java.util.concurrent.Executors;
 
 public class StreamRouter implements Transport.Listener {
 
-    private final String sessionId;
     private final Transport transport;
     private final TcpDialer dialer;
 
     private final Map<Integer, Socket> sockets = new ConcurrentHashMap<>();
     private final ExecutorService readers = Executors.newCachedThreadPool();
 
-    public StreamRouter(String sessionId, Transport transport, TcpDialer dialer) {
-        this.sessionId = sessionId;
+    public StreamRouter(Transport transport, TcpDialer dialer) {
         this.transport = transport;
         this.dialer = dialer;
     }
@@ -49,13 +47,13 @@ public class StreamRouter implements Transport.Listener {
             out.write(data);
             out.flush();
         } catch (Exception e) {
-            closeStream(streamId, "write-error: " + e.getMessage());
+            closeStream(streamId);
         }
     }
 
     @Override
     public void onClose(int streamId, String reason) {
-        closeStream(streamId, "remote-close: " + reason);
+        closeStream(streamId);
     }
 
     @Override
@@ -81,7 +79,7 @@ public class StreamRouter implements Transport.Listener {
                 } catch (Exception ignored) {
                 } finally {
                     transport.close(streamId, "tcp-closed");
-                    sockets.remove(streamId);
+                    closeStream(streamId);
                 }
             });
 
@@ -92,7 +90,7 @@ public class StreamRouter implements Transport.Listener {
         }
     }
 
-    private void closeStream(int streamId, String why) {
+    private void closeStream(int streamId) {
         Socket s = sockets.remove(streamId);
         if (s != null) {
             try {

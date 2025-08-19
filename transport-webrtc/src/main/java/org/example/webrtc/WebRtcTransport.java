@@ -8,7 +8,6 @@ import dev.onvoid.webrtc.RTCIceTransportPolicy;
 import dev.onvoid.webrtc.RTCSignalingState;
 import org.example.common.Frame;
 
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -24,20 +23,17 @@ public class WebRtcTransport implements Transport {
 
     private final AtomicBoolean started = new AtomicBoolean(false);
 
+    private RestartSignalingHandler restartHandler;
+
     public WebRtcTransport() {
-        this(new FixedRtcConfigProvider(
-                new String[]{
-                        "turn:48.209.81.254:3478?transport=udp",
-                        "turn:48.209.81.254:3478?transport=tcp"
-                },
-                "1755624543:test",
-                "BTcCotT3pqLWkUVXUN9jPo6OP9o=",
+        this.configProvider = new RtcConfigProvider(
+                "http://20.82.121.207:8080/ice?u=test&ttl=600",
                 RTCIceTransportPolicy.RELAY
-        ));
+        );
     }
 
-    public WebRtcTransport(RtcConfigProvider configProvider) {
-        this.configProvider = Objects.requireNonNull(configProvider);
+    public void setRestartHandler(RestartSignalingHandler h) {
+        this.restartHandler = h;
     }
 
     @Override
@@ -55,7 +51,7 @@ public class WebRtcTransport implements Transport {
         ensureNotStarted();
         Consumer<String> log = this::log;
 
-        pcMgr = new PeerConnectionManager(configProvider, s -> log.accept(s));
+        pcMgr = new PeerConnectionManager(configProvider, log);
         dcIo = new DataChannelIo(log, this::handleIncomingFrame);
 
         pcMgr.start(new PeerConnectionObserver() {
@@ -77,7 +73,25 @@ public class WebRtcTransport implements Transport {
             }
         });
 
-        RTCDataChannel ch = pcMgr.createDataChannel("tunnel");
+        configProvider.startAutoRefresh((cfg, ttlSec) -> {
+            try {
+                pcMgr.pc().setConfiguration(cfg);
+                log.accept("ICE config applied via setConfiguration(), ttl=" + ttlSec + "s");
+
+                if (restartHandler != null) {
+                    String offer = signaling.createOffer(true);
+                    String answer = restartHandler.onOffer(offer);
+                    signaling.setRemoteAnswer(answer);
+                    log.accept("ICE restart completed");
+                } else {
+                    log.accept("restartHandler is null -> ICE restart skipped");
+                }
+            } catch (Exception e) {
+                log.accept("refresh/restart failed: " + e.getMessage());
+            }
+        }, log);
+
+        RTCDataChannel ch = pcMgr.createDataChannel();
         dcIo.attach(ch);
 
         signaling = new SignalingService(pcMgr.pc(), log);
@@ -89,6 +103,7 @@ public class WebRtcTransport implements Transport {
     public synchronized void stop() {
         if (!started.get()) return;
         try {
+            configProvider.stopAutoRefresh();
         } catch (Throwable ignored) {
         }
         pcMgr.stop();

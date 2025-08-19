@@ -8,14 +8,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class StreamRouter implements Transport.Listener {
 
-    private final String sessionId;
     private final Transport transport;
 
     private final Map<Integer, Socks5Server.Socks5Handler> handlers = new ConcurrentHashMap<>();
     private final Map<Integer, Channel> channels = new ConcurrentHashMap<>();
 
-    public StreamRouter(String sessionId, Transport transport) {
-        this.sessionId = sessionId;
+    public StreamRouter(Transport transport) {
         this.transport = transport;
         this.transport.setListener(this);
     }

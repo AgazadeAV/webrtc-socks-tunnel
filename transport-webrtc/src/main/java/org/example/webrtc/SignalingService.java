@@ -30,11 +30,12 @@ public final class SignalingService {
         this.logger = logger;
     }
 
-    String createOffer() {
-        RTCSessionDescription offer = join(supplyDesc(cb ->
-                pc.createOffer(new RTCOfferOptions(), cb)
-        ), "createOffer");
+    String createOffer() { return createOffer(false); }
 
+    String createOffer(boolean iceRestart) {
+        RTCOfferOptions opt = new RTCOfferOptions();
+        opt.iceRestart = iceRestart;
+        RTCSessionDescription offer = join(supplyDesc(cb -> pc.createOffer(opt, cb)), "createOffer");
         join(run(cb -> pc.setLocalDescription(offer, cb)), "setLocal(offer)");
         awaitGatherOrCandidate();
         return pc.getLocalDescription().sdp;
@@ -50,6 +51,7 @@ public final class SignalingService {
         return pc.getLocalDescription().sdp;
     }
 
+    @SuppressWarnings("BusyWait")
     private void awaitGatherOrCandidate() {
         long deadline = System.currentTimeMillis() + (long) 60000;
         while (System.currentTimeMillis() < deadline) {
