@@ -27,12 +27,11 @@ public class WebRtcTransport implements Transport {
     public WebRtcTransport() {
         this(new FixedRtcConfigProvider(
                 new String[]{
-                        "turn:world.relay.skype.com:3478?transport=udp",
-                        "turn:world.relay.skype.com:443?transport=tcp",
-                        "turns:world.relay.skype.com:443"
+                        "turn:48.209.81.254:3478?transport=udp",
+                        "turn:48.209.81.254:3478?transport=tcp"
                 },
-                "AgAAJEVLrIAB3BSH5Gks6kzpZr6DJDRgnN2HmJLHTwsAAAAA21Ybl4Um71vvQGDEHx/7cxk1Ubo=",
-                "aFQwnGaSu6F2h9SYm+dvAZTiRxw=",
+                "1755624543:test",
+                "BTcCotT3pqLWkUVXUN9jPo6OP9o=",
                 RTCIceTransportPolicy.RELAY
         ));
     }
