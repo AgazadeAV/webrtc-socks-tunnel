@@ -1,4 +1,3 @@
-// main.go
 package main
 
 import (
@@ -19,8 +18,8 @@ import (
 )
 
 const (
-	accountName   = "webrtcsignalstorage" // <-- замени при необходимости
-	containerName = "signals"             // <-- замени при необходимости
+	accountName   = "webrtcsignalstorage"
+	containerName = "signals"
 	listTimeout   = 20 * time.Second
 	ioTimeout     = 20 * time.Second
 	touchTimeout  = 10 * time.Second
@@ -42,8 +41,6 @@ func newApp() (*App, error) {
 	}
 	return &App{client: client}, nil
 }
-
-// --- utils ---
 
 func badRequest(w http.ResponseWriter, msg string) {
 	http.Error(w, msg, http.StatusBadRequest)
@@ -70,9 +67,6 @@ func validateKey(key string) error {
 	return nil
 }
 
-// --- handlers ---
-
-// POST/PUT /put/<key>   (записать/перезаписать blob)
 func (a *App) putHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost && r.Method != http.MethodPut {
 		methodNotAllowed(w, "POST, PUT")
@@ -104,7 +98,6 @@ func (a *App) putHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("OK"))
 }
 
-// GET /get/<key>   (прочитать blob)
 func (a *App) getHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		methodNotAllowed(w, "GET")
@@ -137,7 +130,6 @@ func (a *App) getHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-// DELETE /delete/<key>   (удалить blob)
 func (a *App) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		methodNotAllowed(w, "DELETE")
@@ -162,7 +154,6 @@ func (a *App) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("DELETED"))
 }
 
-// POST/PUT /touch/agents/<agentId>/ready   (heartbeat от агента)
 func (a *App) touchHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost && r.Method != http.MethodPut {
 		methodNotAllowed(w, "POST, PUT")
@@ -187,7 +178,6 @@ func (a *App) touchHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("TOUCHED"))
 }
 
-// GET /agents?maxAgeSec=60   (вернёт ["azer","..."] по свежим heartbeats)
 func (a *App) agentsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), listTimeout)
 	defer cancel()
@@ -236,7 +226,6 @@ func (a *App) agentsHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(ids)
 }
 
-// GET /list?prefix=...  -> JSON array of blob names
 func (a *App) listHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), listTimeout)
 	defer cancel()
@@ -273,13 +262,10 @@ func (a *App) listHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(names)
 }
 
-// GET /health
 func (a *App) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("signal-gw alive"))
 }
-
-// --- main ---
 
 func main() {
 	app, err := newApp()
