@@ -1,5 +1,6 @@
 package org.example.common.signaling;
 
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -42,7 +43,7 @@ public final class Presence {
             URI uri = URI.create(baseUrl + "/agents?maxAgeSec=" + maxAgeSec);
             HttpRequest req = HttpRequest.newBuilder().uri(uri).GET().build();
             HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200) {
+            if (resp.statusCode() == HttpURLConnection.HTTP_OK) {
                 String body = resp.body();
                 body = body.trim();
                 if (body.startsWith("[")) {

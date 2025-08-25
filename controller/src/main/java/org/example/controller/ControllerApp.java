@@ -102,7 +102,7 @@ public class ControllerApp {
 
         System.out.println("[Controller] Connected to agentId=" + agentId + ". Press Ctrl+C to exit");
 
-        Thread.currentThread().join(); // блокируемся
+        Thread.currentThread().join();
     }
 
     private static void configureTransport(WebRtcTransport transport, StreamRouter router) {

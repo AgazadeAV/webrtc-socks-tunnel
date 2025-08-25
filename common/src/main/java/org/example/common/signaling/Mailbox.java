@@ -28,7 +28,6 @@ public final class Mailbox {
                 if (resp.statusCode() == 200) {
                     String body = resp.body().trim();
                     if (body.startsWith("[")) {
-                        // убираем [ ] и парсим массив строк
                         body = body.substring(1, body.length() - 1).trim();
                         if (!body.isEmpty()) {
                             String[] arr = body.split(",");

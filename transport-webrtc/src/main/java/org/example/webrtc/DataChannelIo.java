@@ -28,7 +28,8 @@ public final class DataChannelIo {
         this.dc = channel;
         channel.registerObserver(new RTCDataChannelObserver() {
             @Override
-            public void onBufferedAmountChange(long prev) { /* no-op */ }
+            public void onBufferedAmountChange(long prev) {
+            }
 
             @Override
             public void onStateChange() {
