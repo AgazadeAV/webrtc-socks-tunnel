@@ -4,7 +4,5 @@ public enum CommandType {
     CONNECT,
     CONNECT_ACK,
     DATA,
-    CLOSE,
-    PING,
-    PONG
+    CLOSE
 }

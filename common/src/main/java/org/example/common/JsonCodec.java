@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.IOException;
 
-public class JsonCodec {
+public final class JsonCodec {
+    private JsonCodec() {
+    }
+
     private static final ObjectMapper MAPPER = new ObjectMapper().configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
     public static byte[] encodeBytes(Frame frame) {

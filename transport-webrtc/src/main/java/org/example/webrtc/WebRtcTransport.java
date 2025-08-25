@@ -8,6 +8,7 @@ import dev.onvoid.webrtc.RTCIceTransportPolicy;
 import dev.onvoid.webrtc.RTCSignalingState;
 import org.example.common.Frame;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -15,7 +16,7 @@ public class WebRtcTransport implements Transport {
 
     private final RtcConfigProvider configProvider;
     private Listener listener;
-    private String sessionId = "unknown";
+    private String sessionId = "unassigned-" + UUID.randomUUID();
 
     private PeerConnectionManager pcMgr;
     private DataChannelIo dcIo;
@@ -142,7 +143,7 @@ public class WebRtcTransport implements Transport {
         dcIo.sendFrame(Frame.connectAck(sessionId, streamId, ok, reason));
     }
 
-    public String createOffer(boolean trickle) {
+    public String createOffer() {
         ensureStarted();
         return signaling.createOffer();
     }
@@ -157,17 +158,12 @@ public class WebRtcTransport implements Transport {
         signaling.setRemoteOffer(sdp);
     }
 
-    public String createAnswer(boolean trickle) {
+    public String createAnswer() {
         ensureStarted();
         return signaling.createAnswer();
     }
 
-    public void addRemoteIceCandidate(String candidateJson) {
-        ensureStarted();
-        signaling.addRemoteIceCandidate(candidateJson);
-    }
-
-    private void handleIncomingFrame(org.example.common.Frame f) {
+    private void handleIncomingFrame(Frame f) {
         if (f == null || listener == null) return;
         switch (f.cmd) {
             case CONNECT_ACK -> listener.onConnectAck(f.streamId, f.ok, f.reason);
@@ -176,8 +172,6 @@ public class WebRtcTransport implements Transport {
             case CONNECT -> {
                 listener.onLog(sessionId + " :: CONNECT " + f.host + ":" + f.port + " streamId=" + f.streamId);
                 listener.onIncomingConnect(f.streamId, f.host, f.port);
-            }
-            default -> { //todo ping/pong implementation
             }
         }
     }

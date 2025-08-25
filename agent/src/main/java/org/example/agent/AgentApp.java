@@ -3,14 +3,9 @@ package org.example.agent;
 import org.example.common.Hostname;
 import org.example.common.signaling.Mailbox;
 import org.example.common.signaling.Presence;
-import org.example.common.signaling.S3SignalingProvider;
 import org.example.common.signaling.SignalingProvider;
 import org.example.webrtc.Transport;
 import org.example.webrtc.WebRtcTransport;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -18,127 +13,159 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AgentApp {
 
-    private static final String AWS_ACCESS_KEY = "AKIAUMUKCDOJ2IEBJYIS";
-    private static final String AWS_SECRET_KEY = "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";
-    private static final Region AWS_REGION = Region.US_EAST_2;
-    private static final String S3_BUCKET = "tunnel-signal";
-
+    private static final String SIGNAL_BASE_URL = "http://20.82.121.207:9090";
     private static final int CONNECT_TIMEOUT_MS = 15000;
 
-    public static void main(String[] args) throws Exception {
-        S3Client s3 = buildS3();
-        SignalingProvider sp = new S3SignalingProvider(s3, S3_BUCKET);
+    public static void main(String[] args) {
+        SignalingProvider sp = new SignalingProvider(SIGNAL_BASE_URL);
+        String agentId = Hostname.agentId();
 
-        String AGENT_ID = Hostname.agentId();
-        Presence.startHeartbeat(s3, S3_BUCKET, AGENT_ID, 15);
-        System.out.println("[Agent] agentId=" + AGENT_ID + " is advertising presence");
-
+        startPresence(agentId);
         AtomicBoolean running = new AtomicBoolean(true);
+        installShutdownHook(running);
+
+        try {
+            runAgentLoop(sp, agentId, running);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt(); // корректно восстанавливаем флаг
+            System.out.println("[Agent] interrupted, shutting down...");
+        } catch (Exception e) {
+            System.out.println("[Agent] fatal error: " + e.getMessage());
+        }
+
+        System.out.println("[Agent] stopped");
+    }
+
+    private static void startPresence(String agentId) {
+        Presence.startHeartbeat(SIGNAL_BASE_URL, agentId, 15);
+        System.out.println("[Agent] agentId=" + agentId + " is advertising presence");
+    }
+
+    private static void installShutdownHook(AtomicBoolean running) {
         Thread me = Thread.currentThread();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             running.set(false);
             me.interrupt();
         }, "agent-shutdown"));
+    }
 
+    private static void runAgentLoop(SignalingProvider sp, String agentId, AtomicBoolean running) throws InterruptedException {
         while (running.get()) {
-            System.out.println("[Agent] waiting for offers under sessions/" + AGENT_ID + "/<SESSION_ID>/offer.sdp ...");
-            Mailbox.OfferRef off = Mailbox.waitNextOffer(s3, S3_BUCKET, AGENT_ID,
-                    Duration.ofDays(365), Duration.ofMillis(300));
+            System.out.println("[Agent] waiting for offers under sessions/" + agentId + "/<SESSION_ID>/offer.sdp ...");
+
+            Mailbox.OfferRef off = Mailbox.waitNextOffer(
+                    SIGNAL_BASE_URL, agentId,
+                    Duration.ofDays(365), Duration.ofMillis(300)
+            );
             if (off == null) continue;
 
-            String sdpBase = off.key().substring(0, off.key().length() - "offer.sdp".length());
-            String ro = sdpBase + "restart/offer.sdp";
-            String ra = sdpBase + "restart/answer.sdp";
-
-            WebRtcTransport transport = new WebRtcTransport();
-            StreamRouter router = new StreamRouter(transport, new TcpDialer(CONNECT_TIMEOUT_MS));
-
-            CountDownLatch sessionOver = new CountDownLatch(1);
-
-            transport.setListener(new Transport.Listener() {
-                @Override
-                public void onConnectAck(int streamId, boolean ok, String message) {
-                    router.onConnectAck(streamId, ok, message);
-                }
-
-                @Override
-                public void onData(int streamId, byte[] data) {
-                    router.onData(streamId, data);
-                }
-
-                @Override
-                public void onClose(int streamId, String reason) {
-                    router.onClose(streamId, reason);
-                }
-
-                @Override
-                public void onIncomingConnect(int streamId, String host, int port) {
-                    router.onIncomingConnect(streamId, host, port);
-                }
-
-                @Override
-                public void onLog(String msg) {
-                    router.onLog(msg);
-                    if (msg.contains("ICE CLOSED") || msg.contains("ICE FAILED") || msg.contains("Signaling CLOSED")) {
-                        sessionOver.countDown();
-                    }
-                }
-            });
-
-            transport.setSessionId(AGENT_ID);
-            transport.start();
-
-            AtomicBoolean stopWatcher = new AtomicBoolean(false);
-            Thread watcher = null;
-
             try {
-                // SDP обмен
-                String offerSdp = sp.waitAndGet(off.key(), Duration.ofSeconds(5), Duration.ofMillis(100));
-                System.out.println("[Agent] Offer received from S3: " + off.key());
-                transport.setRemoteOffer(offerSdp);
-
-                String ans = transport.createAnswer(false);
-                sp.putText(sdpBase + "answer.sdp", ans);
-                System.out.println("[Agent] Answer uploaded to " + sdpBase + "answer.sdp");
-                safeDelete(sp, off.key());
-
-                safeDelete(sp, ro);
-                safeDelete(sp, ra);
-                watcher = startRestartWatcher(sp, transport, ro, ra, stopWatcher);
-
-                System.out.println("[Agent] Session started. Waiting for disconnect...");
-                try {
-                    sessionOver.await();
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    if (!running.get()) break;
-                }
+                handleSession(sp, agentId, off, running);
             } catch (Exception e) {
                 System.out.println("[Agent] session error: " + e.getMessage());
-            } finally {
-                stopWatcher.set(true);
-                if (watcher != null) watcher.interrupt();
-                safeDelete(sp, ro);
-                safeDelete(sp, ra);
-
-                try {
-                    transport.stop();
-                } catch (Exception ignored) {
-                }
-                router.shutdown();
             }
         }
+    }
+
+    private static void handleSession(SignalingProvider sp, String agentId, Mailbox.OfferRef off, AtomicBoolean running) throws Exception {
+
+        final String sdpBase = off.key().substring(0, off.key().length() - "offer.sdp".length());
+        final String ro = sdpBase + "restart/offer.sdp";
+        final String ra = sdpBase + "restart/answer.sdp";
+
+        WebRtcTransport transport = new WebRtcTransport();
+        StreamRouter router = new StreamRouter(transport, new TcpDialer(CONNECT_TIMEOUT_MS));
+        CountDownLatch sessionOver = new CountDownLatch(1);
+        configureTransportListener(transport, router, sessionOver);
+
+        transport.setSessionId(agentId);
+        transport.start();
+
+        AtomicBoolean stopWatcher = new AtomicBoolean(false);
+        Thread watcher = null;
 
         try {
-            s3.close();
-        } catch (Exception ignored) {
+            performInitialHandshake(sp, transport, off, sdpBase);
+
+            safeDelete(sp, ro);
+            safeDelete(sp, ra);
+            watcher = startRestartWatcher(sp, transport, ro, ra, stopWatcher);
+
+            System.out.println("[Agent] Session started. Waiting for disconnect...");
+            awaitSessionOver(sessionOver, running);
+
+        } finally {
+            // Graceful teardown
+            stopWatcher.set(true);
+            if (watcher != null) watcher.interrupt();
+            safeDelete(sp, ro);
+            safeDelete(sp, ra);
+            try {
+                transport.stop();
+            } catch (Exception ignored) {
+            }
+            router.shutdown();
         }
-        System.out.println("[Agent] stopped");
+    }
+
+    private static void configureTransportListener(WebRtcTransport transport, StreamRouter router, CountDownLatch sessionOver) {
+        transport.setListener(new Transport.Listener() {
+            @Override
+            public void onConnectAck(int streamId, boolean ok, String message) {
+                router.onConnectAck(streamId, ok, message);
+            }
+
+            @Override
+            public void onData(int streamId, byte[] data) {
+                router.onData(streamId, data);
+            }
+
+            @Override
+            public void onClose(int streamId, String reason) {
+                router.onClose(streamId, reason);
+            }
+
+            @Override
+            public void onIncomingConnect(int streamId, String host, int port) {
+                router.onIncomingConnect(streamId, host, port);
+            }
+
+            @Override
+            public void onLog(String msg) {
+                router.onLog(msg);
+                if (msg.contains("ICE CLOSED") || msg.contains("ICE FAILED") || msg.contains("Signaling CLOSED")) {
+                    sessionOver.countDown();
+                }
+            }
+        });
+    }
+
+    private static void performInitialHandshake(SignalingProvider sp, WebRtcTransport transport, Mailbox.OfferRef off, String sdpBase) throws Exception {
+        String offerSdp = sp.waitAndGet(off.key(), Duration.ofSeconds(5), Duration.ofMillis(100));
+        System.out.println("[Agent] Offer received: " + off.key());
+
+        transport.setRemoteOffer(offerSdp);
+
+        String ans = transport.createAnswer();
+        sp.putText(sdpBase + "answer.sdp", ans);
+        System.out.println("[Agent] Answer uploaded to " + sdpBase + "answer.sdp");
+
+        safeDelete(sp, off.key());
+    }
+
+    private static void awaitSessionOver(CountDownLatch sessionOver, AtomicBoolean running) {
+        try {
+            sessionOver.await();
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            if (!running.get()) {
+                System.out.println("[Agent] Shutdown requested, exiting session wait");
+            }
+        }
     }
 
     @SuppressWarnings("BusyWait")
-    private static Thread startRestartWatcher(SignalingProvider sp, WebRtcTransport transport,
-                                              String ro, String ra, AtomicBoolean stopFlag) {
+    private static Thread startRestartWatcher(SignalingProvider sp, WebRtcTransport transport, String ro, String ra, AtomicBoolean stopFlag) {
         Thread t = new Thread(() -> {
             System.out.println("[Agent] Restart watcher started: ro=" + ro);
             while (!stopFlag.get() && !Thread.currentThread().isInterrupted()) {
@@ -147,7 +174,7 @@ public class AgentApp {
                     if (offer != null && !offer.isBlank()) {
                         System.out.println("[Agent] Restart offer received");
                         transport.setRemoteOffer(offer);
-                        String answer = transport.createAnswer(false);
+                        String answer = transport.createAnswer();
                         safeDelete(sp, ra);
                         sp.putText(ra, answer);
                         System.out.println("[Agent] Restart answer uploaded");
@@ -166,15 +193,6 @@ public class AgentApp {
         t.setDaemon(true);
         t.start();
         return t;
-    }
-
-    private static S3Client buildS3() {
-        return S3Client.builder()
-                .region(AWS_REGION)
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-                ))
-                .build();
     }
 
     private static void safeDelete(SignalingProvider sp, String key) {
