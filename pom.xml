@@ -21,7 +21,7 @@
         <netty.version>4.2.3.Final</netty.version>
         <webrtc.java.version>0.13.0</webrtc.java.version>
 
-        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
         <maven.assembly.plugin.version>3.7.1</maven.assembly.plugin.version>
 
