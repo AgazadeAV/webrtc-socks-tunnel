@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxfixes3 \
     libxcb1 \
+    libxrandr2 \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
