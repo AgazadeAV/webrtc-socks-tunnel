@@ -23,7 +23,16 @@ FROM eclipse-temurin:21-jre-jammy AS runtime
 
 # Базовые либы для нативной части WebRTC
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libstdc++6 libglib2.0-0 libnss3 libasound2 libpulse0 ca-certificates \
+    libstdc++6 \
+    libglib2.0-0 \
+    libnss3 \
+    libasound2 \
+    libpulse0 \
+    libx11-6 \
+    libxext6 \
+    libxfixes3 \
+    libxcb1 \
+    ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
