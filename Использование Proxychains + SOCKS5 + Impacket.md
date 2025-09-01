@@ -73,7 +73,7 @@ Active agents:
 Теперь пробуем выполнить простую команду на таргете. Например, создать папку и файл:
 
 ```bash
-proxychains4 impacket-psexec Administrator:'Пароль'@123.456.78.90 "cmd.exe /c \"mkdir C:\\test && echo hello > C:\\test\\text.txt\""
+proxychains4 wmiexec.py Administrator:'Пароль'@123.456.78.90 "cmd.exe /c \"mkdir C:\test && echo hello > C:\test\text.txt\""
 ```
 
 Где:
