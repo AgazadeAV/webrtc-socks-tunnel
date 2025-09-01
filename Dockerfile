@@ -33,6 +33,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxfixes3 \
     libxcb1 \
     libxrandr2 \
+    libxrender1 \
+    libxi6 \
+    libxtst6 \
+    libxcomposite1 \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
