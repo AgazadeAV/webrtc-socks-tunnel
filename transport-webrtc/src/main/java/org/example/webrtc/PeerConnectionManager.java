@@ -8,6 +8,8 @@ import dev.onvoid.webrtc.RTCIceCandidate;
 import dev.onvoid.webrtc.RTCIceConnectionState;
 import dev.onvoid.webrtc.RTCPeerConnection;
 import dev.onvoid.webrtc.RTCSignalingState;
+import dev.onvoid.webrtc.media.audio.AudioDeviceModule;
+import dev.onvoid.webrtc.media.audio.AudioProcessing;
 
 import java.util.function.Consumer;
 
@@ -25,7 +27,7 @@ public final class PeerConnectionManager {
 
     void start(PeerConnectionObserver externalObserver) {
         if (pc != null) throw new IllegalStateException("PC already started");
-        factory = new PeerConnectionFactory();
+        factory = new PeerConnectionFactory(null, null);
         pc = factory.createPeerConnection(configProvider.get(), wrapObserver(externalObserver));
         logger.accept("pc: started");
     }
