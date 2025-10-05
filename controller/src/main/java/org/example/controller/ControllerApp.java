@@ -9,9 +9,10 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
 
+import static org.example.common.Config.SIGNAL_BASE_URL;
+
 public class ControllerApp {
 
-    private static final String SIGNAL_BASE_URL = "http://20.82.121.207:9090";
     private static final String SOCKS_HOST = "127.0.0.1";
     private static final int SOCKS_PORT = 1080;
 

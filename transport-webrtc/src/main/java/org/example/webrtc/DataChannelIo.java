@@ -7,6 +7,7 @@ import org.example.common.Frame;
 import org.example.common.JsonCodec;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 public final class DataChannelIo {
@@ -43,7 +44,7 @@ public final class DataChannelIo {
                     byte[] bytes;
                     if (data.hasArray()) {
                         int off = data.arrayOffset(), pos = data.position(), lim = data.limit();
-                        bytes = java.util.Arrays.copyOfRange(data.array(), off + pos, off + lim);
+                        bytes = Arrays.copyOfRange(data.array(), off + pos, off + lim);
                     } else {
                         ByteBuffer dup = data.slice();
                         bytes = new byte[dup.remaining()];

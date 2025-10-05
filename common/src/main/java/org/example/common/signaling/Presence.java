@@ -46,6 +46,7 @@ public final class Presence {
             if (resp.statusCode() == HttpURLConnection.HTTP_OK) {
                 String body = resp.body();
                 body = body.trim();
+                if (body.equals("[]")) return List.of();
                 if (body.startsWith("[")) {
                     body = body.substring(1, body.length() - 1);
                     String[] arr = body.split(",");

@@ -11,9 +11,10 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.example.common.Config.SIGNAL_BASE_URL;
+
 public class AgentApp {
 
-    private static final String SIGNAL_BASE_URL = "http://20.82.121.207:9090";
     private static final int CONNECT_TIMEOUT_MS = 15000;
 
     public static void main(String[] args) {
@@ -27,7 +28,7 @@ public class AgentApp {
         try {
             runAgentLoop(sp, agentId, running);
         } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt(); // корректно восстанавливаем флаг
+            Thread.currentThread().interrupt();
             System.out.println("[Agent] interrupted, shutting down...");
         } catch (Exception e) {
             System.out.println("[Agent] fatal error: " + e.getMessage());

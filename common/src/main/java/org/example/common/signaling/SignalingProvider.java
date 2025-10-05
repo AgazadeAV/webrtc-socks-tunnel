@@ -13,7 +13,7 @@ public class SignalingProvider {
     private final HttpClient client = HttpClient.newHttpClient();
 
     public SignalingProvider(String baseUrl) {
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.baseUrl = baseUrl;
     }
 
     public void putText(String key, String content) {

@@ -136,7 +136,7 @@ public final class RtcConfigProvider {
         } catch (Exception e) {
             logger.accept("ICE fetch failed: " + e.getMessage());
             if (current == null) throw new RuntimeException("No ICE config available", e);
-            this.expiresAtEpochSeconds = Instant.now().getEpochSecond() + MIN_REFRESH_SECONDS; // пробуем скоро повторить
+            this.expiresAtEpochSeconds = Instant.now().getEpochSecond() + MIN_REFRESH_SECONDS;
         }
     }
 }

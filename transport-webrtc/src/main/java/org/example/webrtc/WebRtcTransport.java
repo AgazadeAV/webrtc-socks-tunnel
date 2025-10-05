@@ -12,6 +12,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
+import static org.example.common.Config.ICE_BASE_URL;
+
 public class WebRtcTransport implements Transport {
 
     private final RtcConfigProvider configProvider;
@@ -28,7 +30,7 @@ public class WebRtcTransport implements Transport {
 
     public WebRtcTransport() {
         this.configProvider = new RtcConfigProvider(
-                "http://20.82.121.207:8080/ice?u=test&ttl=600",
+                ICE_BASE_URL + "/ice?u=test",
                 RTCIceTransportPolicy.RELAY
         );
     }

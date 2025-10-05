@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	accountName   = "webrtcsignalstorage"
+	accountName   = "webrtcsignal"
 	containerName = "signals"
 	listTimeout   = 20 * time.Second
 	ioTimeout     = 20 * time.Second
